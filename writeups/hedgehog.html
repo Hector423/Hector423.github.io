@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hedgehog — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina Hedgehog (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Muy fácil · dockerlabs</span>
+    <h1>Hedgehog</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Realizo un escaneo con nmap para saber que servicios tiene la máquina.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/72529455-c50f-46ae-836a-6656d2e9dc66" alt="Captura del paso" loading="lazy"></figure>
+<p>El escaneo me muestra dos servicios, ssh y apache en los puertos habituales.</p>
+<h2>Enumeración</h2>
+<p>Empiezo a hacer enumeración con gobuster para ver que puedo obtener</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/d0799e3f-ba46-4906-8599-660519037f5a" alt="Captura del paso" loading="lazy"></figure>
+<p>No me muestra nada que pueda utilizar, voy a la propia página para ver que contiene</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/93616800-96cf-416d-a346-bfd454ab56ed" alt="Captura del paso" loading="lazy"></figure>
+<p>La página solo muestra la palabra tails, que si no me equivoco podría ser el nombre de Tails de la saga de Sonic debido al nombre de la máquina.</p>
+<h2>Explotación</h2>
+<p>Pruebo a hacer fuerza bruta al servicio ssh con el nombre de tails para ver si puedo sacar la contraseña.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/e17e90ea-856e-4df4-bc5e-81fc3eae93a9" alt="Captura del paso" loading="lazy"></figure>
+<p>Luego de dejar hydra un rato no consigo sacar nada, pero se me ocurre que tails también se puede referir a el comando tail, que sirve para ver el final de un archivo.</p>
+<p>Así que lo que hago es copiar las últimas 100 lineas del diccionario rockyou para ver si la contraseña esta en el final.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/a35fefa6-387a-4df5-bbec-75f02342e804" alt="Captura del paso" loading="lazy"></figure>
+<p>También será necessario quitar los espacios, para ello.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/ee0c1f6a-4409-4631-9287-7f0b835f7de7" alt="Captura del paso" loading="lazy"></figure>
+<p>Y ahora si, ejecuto hydra.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/28bf71cd-6bcd-4f92-a928-fd9523192752" alt="Captura del paso" loading="lazy"></figure>
+<p>Encuentro la <strong>contraseña</strong>, así que hago login en ssh con el usuario tails</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/467b882e-f632-4439-8e13-6a6f7ca11efd" alt="Captura del paso" loading="lazy"></figure>
+<h2>Escalada de privilegios</h2>
+<p>Primero busco binarios que me puedan servir y permisos del usuario tails</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/eb285bbb-ef60-453f-8dbe-c8618658daf8" alt="Captura del paso" loading="lazy"></figure>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/cd3a8366-6ac9-47ad-8d66-1d278b6c04a6" alt="Captura del paso" loading="lazy"></figure>
+<div class="callout"><div class="callout-title mono">Importante!</div><div class="callout-body">Al ejecutar sudo -l veo que puedo llegar hasta el usuario sonic sin necesidad de la contraseña</div></div>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/a33b274f-08e9-49fd-a061-d89f4bc69ee8" alt="Captura del paso" loading="lazy"></figure>
+<p>Ahora tengo que ver que puede hacer sonic.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/c42d69ec-8c0f-48c1-a479-3fd5b519159f" alt="Captura del paso" loading="lazy"></figure>
+<div class="callout"><div class="callout-title mono">Importante!</div><div class="callout-body">Parece ser que sonic también puede escalar sin necesidad de contraseña, pero esta vez puede llegar hasta <strong>root</strong>, así que ejecuto sudo su.</div></div>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/30a586db-43fc-4370-bf35-d0facf16b2e3" alt="Captura del paso" loading="lazy"></figure>
+<p>Y obtengo acceso al usuario root.</p>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

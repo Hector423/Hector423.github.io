@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Borazuwarahctf — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina Borazuwarahctf (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Muy fácil · dockerlabs</span>
+    <h1>Borazuwarahctf</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Inicio con un escaneo de puertos con nmap</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/f23767f9-a604-4698-8613-6ce998fbd6d4" alt="Captura del paso" loading="lazy"></figure>
+<p>El escaneo me muestra dos servicios, un servicio de ssh en el puerto 22 y uno de http en el 80.</p>
+<p>Decido ir a la página web para poder obtener más información</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/ead6f7c1-8840-4ccc-ad4d-3a8b49036029" alt="Captura del paso" loading="lazy"></figure>
+<p>En la página solo hay una imagen de un huevo kinder así que decido descargar la imagen para ver si tiene dentro información escondida</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/0f50e150-8242-4bd3-aef0-32e41f61e448" alt="Captura del paso" loading="lazy"></figure>
+<p>Uso la herramienta <strong>exiftool</strong> y encuentro un <strong>usuario</strong>: borazuwarah. Aunque no contiene la contraseña así que voy a tener que utilizar fuerza bruta.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/4418e67a-686a-4787-b21e-e2598872e2e5" alt="Captura del paso" loading="lazy"></figure>
+<h2>Explotación</h2>
+<p>Con hydra simplemente añado el usuario encontrado y utilizo el diccionario rockyou</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/ca90fd35-77e0-4ee6-aa93-e75c70c5260d" alt="Captura del paso" loading="lazy"></figure>
+<p>Obtengo la <strong>contraseña</strong> del usuario borazuwarah</p>
+<div class="callout"><div class="callout-title mono">Usuario y contraseña</div><div class="callout-body"><strong>Usuario:</strong> borazuwarah<br><strong>Contraseña:</strong> 123456</div></div>
+<p>Consigo iniciar session, ahora solo queda escalar privilegios</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/f88e5951-1fef-4713-b004-2dd9734439d2" alt="Captura del paso" loading="lazy"></figure>
+<h2>Escalada de privilegios</h2>
+<p>Empiezo buscando possibles formas para poder escalar privilegios, primero ejecuto `<code class="mono">sudo -l</code>`.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/803a0ae6-9236-4aa0-8863-eee3cff5740b" alt="Captura del paso" loading="lazy"></figure>
+<p>Y me doy cuenta de que el usuario borazuwarah puede <strong>escalar a root sin contraseña</strong>, así que simplemente ejecuto sudo su.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/11675088-9cac-4046-8eef-84b9158cf300" alt="Captura del paso" loading="lazy"></figure>
+<p>Y ya soy root en el sistema.</p>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obsession — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina Obsession (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Muy fácil · dockerlabs</span>
+    <h1>Obsession</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Inicio con un escaneo con nmap para poder saber que servicios tiene la maquina.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/6e9d92fe-dea7-4af1-9bd3-81b14bfd08de" alt="Captura del paso" loading="lazy"></figure>
+<p>En los puertos abiertos, puedo comprobar que la máquina tiene: ftp, ssh y http. Voy a empezar con el servicio de ftp</p>
+<h2>Exploración servicio FTP</h2>
+<p>Me doy cuenta en el escaneo de nmap de que el servicio de ftp tiene <strong>habilitado el inicio de sesión anónimo</strong>, y que este tiene permisos de lectura para dos archivos .txt.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/99334579-8500-4fc6-88a8-a24d02f599cb" alt="Captura del paso" loading="lazy"></figure>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/bca614db-3959-4007-a283-0d0001ac47ed" alt="Captura del paso" loading="lazy"></figure>
+<p>Efectivamente puedo acceder, voy a leer el contenido de los dos archivos.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/8428ced7-5ed5-4b75-93b7-97b889b3a7a4" alt="Captura del paso" loading="lazy"></figure>
+<div class="callout"><div class="callout-title mono">Importante</div><div class="callout-body">De los dos archivos se puede sacar que existen dos <strong>usuarios</strong>: Gonza y Russoki y que hay algunos permisos mal configurados en el equipo.</div></div>
+<h2>Exploración servicio HTTP</h2>
+<p>Antes de intentar realizar fuerza bruta con algunos de los dos usuarios, voy a investigar el servicio de http para ver si puedo obtener más información</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/f9ceacb1-13ac-4455-b8d4-e09386f81d9b" alt="Captura del paso" loading="lazy"></figure>
+<p>El servicio de http lleva a la página por defecto de apache, así que voy a realizar una enumeración de directorios con gobuster para ver si hay algo oculto.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/6b139014-13e5-4e97-8181-b0065bb8588c" alt="Captura del paso" loading="lazy"></figure>
+<div class="callout"><div class="callout-title mono">Importante</div><div class="callout-body">Consigo sacar <strong>dos rutas nuevas</strong> ocultas: /backup y /important</div></div>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/5aa0b0ef-895c-4670-915b-9fd9c567492c" alt="Captura del paso" loading="lazy"></figure>
+<p>En el de backup nos confirma la existencia del usuario russoski y que este se usa para todos los servicios.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/41960533-8d05-4441-8ee6-219db52f4619" alt="Captura del paso" loading="lazy"></figure>
+<p>Y en el de important sale un manifiesto hacker</p>
+<h2>Explotación</h2>
+<p>Una vez comprobado todo el servicio de http, decido realizar un ataque de fuerza bruta con el usuario de russoski</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/79794d5b-400f-473e-bf39-9a06a31b1aa8" alt="Captura del paso" loading="lazy"></figure>
+<p>Obtengo la contraseña del usuario russoski: iloveme</p>
+<div class="callout"><div class="callout-title mono">Usuario y contraseña</div><div class="callout-body"><strong>Usuario:</strong> russoski<br><strong>Contraseña:</strong> iloveme</div></div>
+<p>Voy a usar las credenciales para iniciar sesión en el servicio ssh</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/858847a5-c3ae-4b4d-822f-c1416b087317" alt="Captura del paso" loading="lazy"></figure>
+<h2>Escalada de privilegios</h2>
+<p>Dentro del sistema puedo ver archivos interesantes.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/41173dbe-b5fb-4403-b0d8-120d5cc01793" alt="Captura del paso" loading="lazy"></figure>
+<p>Aunque me quedo con que el usuario russoski puede <strong>ejecutar /usr/bin/vim como superusuario</strong>.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/833ddee0-3542-468f-b8b3-cdeed1dbcd6d" alt="Captura del paso" loading="lazy"></figure>
+<p>Ejecutando el siguiente código como administrador obtengo el acceso al superusuario.</p>
+<pre class="code-block mono"><code>sudo vim -c ':!/bin/sh</code></pre>
+<p>Con este comando lo que consigo es crear una shell de root usando vim</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/971f7f01-f58d-4fb2-83b0-4a6c1c7f60a5" alt="Captura del paso" loading="lazy"></figure>
+<p>Una vez ejecutado si ejecuto whoami me responde con el usuario root, obteniendo acceso completo al sistema.</p>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

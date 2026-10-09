@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FirstHacking — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina FirstHacking (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Muy fácil · dockerlabs</span>
+    <h1>FirstHacking</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Hago un primer escaneo simple con nmap</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/93e5a13d-e07d-42a1-a8ae-618bd9895797" alt="Captura del paso" loading="lazy"></figure>
+<p>Puedo ver que hay un servicio ftp, voy a hacer un escaneo más profundo para obtener más información</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/7b0262a0-d024-40ba-acab-603841611143" alt="Captura del paso" loading="lazy"></figure>
+<p>Como veo que no hay más servicios que el de ftp, intento hacer una conexion usando el usuario anonimo de ftp para ver si hay suerte</p>
+<h2>Explotación y escalada</h2>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/d8e1520e-26c4-4118-b1b1-bfa28c1ca4f0" alt="Captura del paso" loading="lazy"></figure>
+<p>No se puede iniciar session con el usuario anónimo, así que busco otra forma.</p>
+<p>Abro la consola de metasploitable para buscar si la versión del servicio ftp tiene alguna vulnerabilidad reconocida.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/acabe9de-021f-4388-8fad-b46d86461d62" alt="Captura del paso" loading="lazy"></figure>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/8a5489bb-b5df-46fb-970f-82d866cc08c8" alt="Captura del paso" loading="lazy"></figure>
+<p>Parece que hay una, añado todos los requisitos del exploit para que funcione, solo hace falta poner la ip y puerto</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/784dd65a-d003-4f32-8c78-6b9e7c4ed88d" alt="Captura del paso" loading="lazy"></figure>
+<p>Ejecuto el exploit y me da acceso a una shell con root</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/d0f12aae-db39-4710-9ace-524b72fe0575" alt="Captura del paso" loading="lazy"></figure>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

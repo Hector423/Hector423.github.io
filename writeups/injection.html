@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Injection — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina Injection (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Muy fácil · dockerlabs</span>
+    <h1>Injection</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Inicio con un escaneo de nmap para saber que puertos tiene abiertos y que servicios hay.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/991aa811-9c1a-4820-88d6-c4c52ab72b50" alt="Captura del paso" loading="lazy"></figure>
+<p>Puedo ver que hay un servicio de ssh y otro de http.</p>
+<p>Voy a la pagina web que tiene alojada el servidor</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/124970a3-11fe-42f4-84b5-ac52ba22ec7a" alt="Captura del paso" loading="lazy"></figure>
+<h2>Explotación</h2>
+<p>Puedo ver que hay un panel de login dentro, instantáneamente me viene a la mente el intentar un SQLinjection, para ello una forma de comprobar si existe esta vulnerabilidad es simplemente poner una ' en el campo de usuario. Si existe una vulnerabilidad tipo SQLinjection me devolverá un error.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/1d90e24d-50a4-4bf5-8563-955ec6d9a6ae" alt="Captura del paso" loading="lazy"></figure>
+<p>Se puede ver como salta un error no contemplado de SQL. Así que pruebo las inyecciones más comunes</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/93ce5a5a-72d1-4fc5-8bea-db0ece8f2317" alt="Captura del paso" loading="lazy"></figure>
+<p>Me deja iniciar sesión como Dylan y obtengo su contraseña.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/97de1339-974d-48b7-9a3b-57f506641917" alt="Captura del paso" loading="lazy"></figure>
+<div class="callout"><div class="callout-title mono">Usuario y contraseña</div><div class="callout-body"><strong>Usuario:</strong> Dylan<br><strong>Contraseña:</strong> KJSDG789FGSDF78</div></div>
+<p>Voy a probar a iniciar sesión con este usuario y contraseña en el servicio ssh.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/89a78b23-3ddd-476e-8268-9511f6125e89" alt="Captura del paso" loading="lazy"></figure>
+<p>Me deja acceder, ahora tengo que escalar privilegios.</p>
+<h2>Escalada de privilegios</h2>
+<p>Ejecuto find / -perm -u=s -type f 2&gt;/dev/null para poder buscar binarios explotables</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/966b977f-a411-4e12-bc67-080948f366a8" alt="Captura del paso" loading="lazy"></figure>
+<p>Veo que puedo usar el binario /usr/bin/env para generar una shell con root.</p>
+<p>Ejecuto <code class="mono">env /bin/sh -p</code> y obtengo root del sistema.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/675c6d51-228c-4f06-bfe3-1cbdf9f0f9a6" alt="Captura del paso" loading="lazy"></figure>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

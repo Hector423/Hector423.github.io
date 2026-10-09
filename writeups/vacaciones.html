@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vacaciones — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina Vacaciones (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Muy fácil · dockerlabs</span>
+    <h1>Vacaciones</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Empiezo el escaneo con nmap para ver que puertos tiene abiertos</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/d7e6edcc-db65-4c16-8c86-e2d8274947e5" alt="Captura del paso" loading="lazy"></figure>
+<p>Veo que tiene el puerto 22 para ssh y el 80 para http, decido mirar la página web para obtener más información</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/238b41cc-028b-4238-9870-a3021194d9dd" alt="Captura del paso" loading="lazy"></figure>
+<p>A simple vista no parece que tenga nada, investigo el código de la página por si hay algo oculto</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/cf14368f-66e2-44e9-b9f5-f7d693fe818c" alt="Captura del paso" loading="lazy"></figure>
+<p>Consigo dos posibles nombres de usuario, <strong>Juan y Camilo</strong>, voy a probar estos nombres con el servicio ssh</p>
+<h2>Explotación</h2>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/f2857706-c04c-4c62-9c1b-2ac931d35e13" alt="Captura del paso" loading="lazy"></figure>
+<p>Utilizo el nombre de camilo para el servicio de ssh con la herramienta de hydra para realizar un ataque de fuerza bruta.</p>
+<p>Obtengo la <strong>contraseña</strong> del usuario <strong>camilo.</strong></p>
+<div class="callout"><div class="callout-title mono">Usuario y contraseña</div><div class="callout-body"><strong>Usuario:</strong> Camilo<br><strong>Contraseña:</strong> password1</div></div>
+<h2>Escalada de privilegios</h2>
+<p>Empiezo a intentar escalar privilegios</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/af94aed1-24b7-48dc-84cf-b70738484d55" alt="Captura del paso" loading="lazy"></figure>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/45f2c824-2481-462b-9381-1db390a318d7" alt="Captura del paso" loading="lazy"></figure>
+<p>Realizo una búsqueda de binarios y de permisos para el usuario camilo, no encuentro nada relevante, solo un usuario más llamado pedro.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/ffa76692-1e7e-4de7-b889-618718c02cf8" alt="Captura del paso" loading="lazy"></figure>
+<p>Como en el mensaje que he encontrado antes mencionaban un correo, voy a ver si hay algo en /var/mail que me pueda servir</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/48df8c20-6bfc-41b9-a55a-9d4e8529611a" alt="Captura del paso" loading="lazy"></figure>
+<p>Efectivamente encuentro un correo y dentro hay una <strong>contraseña.</strong></p>
+<p>Como el mensaje de antes era del usuario Juan, la contraseña deberá de ser de ese usuario.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/e5a8ad9a-76df-4072-988a-ade2fdb81516" alt="Captura del paso" loading="lazy"></figure>
+<p>La pruebo con el usuario juan y consigo el acceso</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/23209d6e-6506-4fd2-af42-55882e2a31bd" alt="Captura del paso" loading="lazy"></figure>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/6f008138-a269-4809-9235-b7734a99533a" alt="Captura del paso" loading="lazy"></figure>
+<p>Intento buscar formas de escalada con el usuario juan y me encuentro que tiene un permiso de superusuario <strong>para ejecutar ruby sin contraseña</strong>. Según gtfobins si ejecuto el siguiente comando:</p>
+<pre class="code-block mono"><code>ruby -e 'exec "/bin/sh"'</code></pre>
+<p>Podré obtener una shell como root, así que la ejecuto i obtengo el root del sistema</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/c6bf946f-1287-46fb-9145-3be921ca76dc" alt="Captura del paso" loading="lazy"></figure>
+<p>Después de ejecutar el comando obtengo el root</p>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

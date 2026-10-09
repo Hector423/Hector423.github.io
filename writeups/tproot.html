@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tproot — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina Tproot (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Muy fácil · dockerlabs</span>
+    <h1>Tproot</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Realizo un primer escaneo para poder ver que servicios hay activos en la máquina.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/8216a4f8-10ae-43a4-b846-777b8831ada5" alt="Captura del paso" loading="lazy"></figure>
+<p>Hago un escaneo de la página con gobuster, no encuentro nada.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/fb1d1d85-b096-4972-a3bc-75b677ef50a6" alt="Captura del paso" loading="lazy"></figure>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/64f39dd8-3809-48e2-9544-19d5d8dff094" alt="Captura del paso" loading="lazy"></figure>
+<p>Decido iniciar la msfconsole para poder buscar más cómodo algún exploit o escáner sobre los servicios que tengo disponibles en la máquina.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/56d87c2f-fb34-464e-ae48-d2ec88b1897b" alt="Captura del paso" loading="lazy"></figure>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/05414e59-e6e0-4676-bc2b-f48cea69e86a" alt="Captura del paso" loading="lazy"></figure>
+<p>Ahora voy a buscar exploits que me puedan servir por la versión de los servicios.</p>
+<p>De apache no encuentro nada pero de vsftpd si.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/4d065d60-2a85-4478-8e95-94d56b45caa9" alt="Captura del paso" loading="lazy"></figure>
+<h2>Explotación y escalada de privilegios</h2>
+<p>Hay un exploit para la versión que se esta ejecutando.</p>
+<p>Lo uso y miro lo que pide para poder ejecutarlo.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/d31376a8-e569-4fd0-8cd5-a84c3be73fa1" alt="Captura del paso" loading="lazy"></figure>
+<p>Ejecuto y obtengo root.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/6fe55bb9-0476-4ded-9d46-88ee564ebe26" alt="Captura del paso" loading="lazy"></figure>
+<p>Ahora puedo tratar de mejorar la shell para finalizar.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/ac8cca6e-7e79-45be-b255-8f0bb183baae" alt="Captura del paso" loading="lazy"></figure>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

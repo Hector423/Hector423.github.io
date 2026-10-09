@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BreakMySSH — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina BreakMySSH (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Muy fácil · dockerlabs</span>
+    <h1>BreakMySSH</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Realizo un escaneo inicial a la máquina.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/ae5409b8-4f91-40d4-ad22-3b0a3c26fff9" alt="Captura del paso" loading="lazy"></figure>
+<p>Veo que solo hay un servicio de ssh, así que para poder obtener más información realizo otro escaneo más profundo.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/7ce52c48-ae33-4b38-9f81-291cbc20f444" alt="Captura del paso" loading="lazy"></figure>
+<h2>Explotación y escalada</h2>
+<p>Comprobado que no hay más servicios abiertos, decido intentar una conexión ssh para ver si puedo obtener un poco más de información</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/a0b57f7e-66fd-4724-92e2-35de9f5cb008" alt="Captura del paso" loading="lazy"></figure>
+<p>No encuentro nada relevante así que decido realizar un ataque de fuerza bruta al servicio de ssh. Para facilitar el ataque voy a usar solo el usuario root.</p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/9f42494e-0965-45cf-97b5-e3e7b10b22c9" alt="Captura del paso" loading="lazy"></figure>
+<p>Encuentro la <strong>contraseña</strong> que me permite iniciar session con el <strong>usuario root</strong></p>
+<figure class="shot"><img src="https://github.com/user-attachments/assets/783c2bdd-9994-4700-a6f0-515146936894" alt="Captura del paso" loading="lazy"></figure>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

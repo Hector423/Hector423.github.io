@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirame — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina Mirame (DockerLabs): reconocimiento, explotación y escalada de privilegios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../index.html#sobre-mi">Sobre mí</a>
+      <a href="../index.html#certificaciones">Certificaciones</a>
+      <a href="../index.html#proyectos">Proyectos</a>
+      <a href="index.html">Writeups</a>
+      <a href="../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Fácil · dockerlabs</span>
+    <h1>Mirame</h1>
+  </div>
+
+  <article class="writeup-body">
+<h2>Reconnaissance</h2>
+<p>Realizo un primer escaneo.</p>
+<pre class="code-block mono"><code>nmap -p- -sV -sC --open 172.17.0.2 -oN primer_scan.txt</code></pre>
+<figure class="shot"><img src="img/mirame/img01.png" alt="Captura del paso" loading="lazy"></figure>
+<p>En este primer escaneo puedo ver que hay dos puertos abiertos, el 22 con ssh y el 80 con un servicio web.</p>
+<h2>Enumeración</h2>
+<p>Voy a realizar una enumeración con dirbuster en el servicio web.</p>
+<figure class="shot"><img src="img/mirame/img02.png" alt="Captura del paso" loading="lazy"></figure>
+<p>El escaneo encuentra esto, no hay mucha cosa así que voy a mirar qué hay en cada una.</p>
+<p>En index.php me encuentro con un login.</p>
+<figure class="shot"><img src="img/mirame/img03.png" alt="Captura del paso" loading="lazy"></figure>
+<p>En page.php hay una página para consultar el clima.</p>
+<figure class="shot"><img src="img/mirame/img04.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Y en auth.php parece que da un error al entrar.</p>
+<figure class="shot"><img src="img/mirame/img05.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Parece ser que necesita un usuario y contraseña para que funcione esta parte.</p>
+<h2>Explotación</h2>
+<p>Viendo todo esto, lo primero que se me ocurre hacer es comprovar si existe alguna vulnerabilidad de sql injection.</p>
+<figure class="shot"><img src="img/mirame/img06.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Al añadir la ' parece que salta un error no contemplado de sql, lo que me confirma de que el sitio es vulnerable a sql injection.</p>
+<figure class="shot"><img src="img/mirame/img07.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Probando diferentes formas de inyección sql doy con una que parece que funciona, aunque el login de la página solo lleva al archivo page.php.</p>
+<p>No hay mucho más que pueda hacer de forma manual así que decido utilizar sqlmap para ver si puedo sacar algo.</p>
+<p>Copio la petición POST del login y la pego en un .txt.</p>
+<figure class="shot"><img src="img/mirame/img08.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Y lo uso para intentar sacar las bases de datos.</p>
+<figure class="shot"><img src="img/mirame/img09.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Parece que saco una tabla con usuarios y contraseñas.</p>
+<figure class="shot"><img src="img/mirame/img10.png" alt="Captura del paso" loading="lazy"></figure>
+<p>No parece que pueda acceder con esos usuarios por ssh, pero viendo que un usuario se llama directorio y su contraseña es directoriotravieso puede que sea una pista para encontrar un directorio oculto dentro del servicio http.</p>
+<figure class="shot"><img src="img/mirame/img11.png" alt="Captura del paso" loading="lazy"></figure>
+<p>En efecto, descubro un directorio oculto utilizando la contraseña del usuario directorio.</p>
+<p>Dentro parece que hay una imagen que se titula miramebien, la voy a descargar y intentar ver si hay algo oculto dentro.</p>
+<figure class="shot"><img src="img/mirame/img12.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Con exiftool no consigo encontrar nada.</p>
+<figure class="shot"><img src="img/mirame/img13.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Pero usando stegseek consigo encontrar una contraseña y extraer algo oculto en la imagen.</p>
+<p>Como lo que he extraído es un zip y este pide contraseña también tengo que hacer fuerza bruta, en este caso usaré la herramienta john.</p>
+<figure class="shot"><img src="img/mirame/img14.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Ahora ya puedo leer el .txt.</p>
+<figure class="shot"><img src="img/mirame/img15.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Dentro del txt hay un usuario y contraseña.</p>
+<p><strong>Usuario:</strong> carlos <strong>Contraseña:</strong> carlitos</p>
+<figure class="shot"><img src="img/mirame/img16.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Utilizo ese usuario y contraseña para acceder via ssh a la máquina.</p>
+<p>Una vez dentro, ahora solo queda escalar privilegios.</p>
+<h2>Escalada de privilegios</h2>
+<figure class="shot"><img src="img/mirame/img17.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Viendo los binarios veo que puedo usar el find para la escalada, ya que si miramos en gtfobins vemos que podemos escalar con este comando:</p>
+<pre class="code-block mono"><code>find . -exec /bin/sh -p \; -quit</code></pre>
+<figure class="shot"><img src="img/mirame/img18.png" alt="Captura del paso" loading="lazy"></figure>
+<p>Y con esto ya sería root del sistema.</p>
+  </article>
+
+  <a class="back-link mono" href="index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>

